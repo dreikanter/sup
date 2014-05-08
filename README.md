@@ -1,15 +1,11 @@
 # SUP!
 
-SUP is an acronym standing for Screenshot UPloader. It is a tyny companion service for your favirite screenshot capturer, like [Monosnap](http://monosnap.com), [FastStone Capture](http://www.faststone.org/FSCaptureDetail.htm), or any other tool able to save screenshots to file system.
-
-SUP monitors a directory where new screenshots supposed to be saved, and performs the following operations for each one of them:
+SUP is an acronym standing for Screenshot UPloader. It is a companion service for your favorite screenshot capturer, like [Monosnap](http://monosnap.com), [FastStone Capture](http://www.faststone.org/FSCaptureDetail.htm), or any other tool able to save screenshots to file system. SUP monitors a directory where new screenshots supposed to be saved, and performs the following operations for each one of them:
 
 - Determine better graphic format (JPEG or PNG), and convert source file if needed.
 - Rename the screenshot to a short unique name.
-- Optionally generate downscaled preview image version.
-- Generate metadata file.
 - Upload everything to the S3 bucket.
-- Copy screenshot URL to the clipboard.
+- Copy screenshot URL to clipboard.
 - Notify user using visual notification.
 
 ## Usage
