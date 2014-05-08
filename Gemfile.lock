@@ -1,0 +1,48 @@
+GIT
+  remote: git://github.com/guard/listen.git
+  revision: b68375fb5734fbd0885d5f58f2aff448a24c2015
+  specs:
+    listen (2.7.1)
+      celluloid (>= 0.15.2)
+      celluloid-io (>= 0.15.0)
+      rb-fsevent (>= 0.9.3)
+      rb-inotify (>= 0.9)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    aws-sdk (1.39.0)
+      json (~> 1.4)
+      nokogiri (>= 1.4.4)
+    celluloid (0.15.2)
+      timers (~> 1.1.0)
+    celluloid-io (0.15.0)
+      celluloid (>= 0.15.0)
+      nio4r (>= 0.5.0)
+    clipboard (1.0.5)
+    ffi (1.9.3-x86-mingw32)
+    json (1.8.1)
+    mini_portile (0.5.3)
+    nio4r (1.0.0)
+    nokogiri (1.6.1)
+      mini_portile (~> 0.5.0)
+    nokogiri (1.6.1-x86-mingw32)
+      mini_portile (~> 0.5.0)
+    rb-fsevent (0.9.4)
+    rb-inotify (0.9.3)
+      ffi (>= 0.5.0)
+    rmagick (2.13.2)
+    timers (1.1.0)
+    wdm (0.1.0)
+
+PLATFORMS
+  x86-mingw32
+
+DEPENDENCIES
+  aws-sdk
+  clipboard
+  listen (~> 2.0)!
+  rb-fsevent
+  rb-inotify
+  rmagick
+  wdm (>= 0.1.0)
