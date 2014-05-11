@@ -1,4 +1,4 @@
-# Sup — a Screenshot Uploader
+# Sup — Screenshot Uploader
 
 This is a tiny companion service for your favorite screenshot tool, allowing you to take control over image sharing functionality.
 
@@ -6,7 +6,7 @@ Sup is compatible with any screenshot capturer that is able to save screenshots 
 
 - [Monosnap](http://monosnap.com)
 - [FastStone Capture](http://www.faststone.org/FSCaptureDetail.htm)
-- [Snipping Tool](http://windows.microsoft.com/en-us/windows7/products/features/snipping-tool) or 
+- [Snipping Tool](http://windows.microsoft.com/en-us/windows7/products/features/snipping-tool)
 - [Cropper](https://cropper.codeplex.com/)
 - [Lightscreen](http://lightscreen.com.ar/)
 
@@ -40,11 +40,11 @@ User notification is working on OS X and Window. Sup uses standard system notifi
 
 ## Usage
 
-This is a basic command to watch for new screenshots at `~/Screenshots` and upload them to `s3://shots.example.com`:
+This is a basic command to watch for new screenshots at `~/Screenshots` and upload them to Amazon S3 bucket named `shots.example.com`:
 
-	ruby sup.rb watch ~/Screenshots shots.example.com
+	ruby sup.rb watch ~/Screenshots shots.example.com --notify
 
-Use `--help` for usage details.
+`--notify` option enables user notification here. Use `--help` for other usage details.
 
 ## Development
 
