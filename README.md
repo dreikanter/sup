@@ -38,13 +38,15 @@ To access S3 bucket sup requires Amazon Web Services [access credentials](https:
 
 User notification is working on OS X and Window. Sup uses standard system notification on OS X. On Windows you will need a helper tool [notifu](http://www.paralint.com/projects/notifu/) to be available on `%PATH%`.
 
+<p align="center"><img src="http://sh.drafts.cc/2w.jpg" alt="sup notification"></p>
+
 ## Usage
 
 This is a basic command to watch for new screenshots at `~/Screenshots` and upload them to Amazon S3 bucket named `shots.example.com`:
 
 	ruby sup.rb watch ~/Screenshots shots.example.com --notify
 
-`--notify` option enables user notification here. Use `--help` for other usage details.
+In this example `--notify` option enables user notification. Use `--help` for other usage details.
 
 ## Development
 
