@@ -1,3 +1,8 @@
+require 'rbconfig'
+
+WINDOWS = RbConfig::CONFIG['host_os'] =~ /mingw|mswin/i
+DARWIN = RbConfig::CONFIG['host_os'] =~ /darwin/
+
 require 'aws-sdk'
 require 'clipboard'
 require 'fileutils'
@@ -5,6 +10,7 @@ require 'json'
 require 'filesize'
 require 'listen'
 require 'logger'
+require 'terminal-notifier' if DARWIN
 require 'thor'
 require 'uri'
 
@@ -136,10 +142,13 @@ module Sup
   end
 
   # Notify user.
-  def notify(title, message)
-    # TODO: Variate notification methods
-    cmd = "notifu /p \"#{title}\" /m \"#{message}\" /d 2000 /t info /q"
-    execute(cmd)
+  def notify(title, message, url)
+    if WINDOWS
+      cmd = "notifu /p \"#{title}\" /m \"#{message}\" /d 2000 /t info /q"
+      execute(cmd)
+    elsif DARWIN
+      TerminalNotifier.notify(message, :activate => url, :title => title)
+    end
   end
 
   # Execute system command.
@@ -259,7 +268,9 @@ module Sup
         info = process_image(file_name)
         info[:files].each {|key, file_name| upload(key, file_name)}
         Clipboard.copy info[:url]
-        notify("Screenshot Uploader", "URL: #{info[:url]}")
+        if @args[:notify]
+          notify("Screenshot Uploader", "URL: #{info[:url]}", info[:url])
+        end
       end
     end
     Listen.to(@path,
@@ -335,6 +346,11 @@ class CLI < Thor
          :type => :boolean,
          :default => false,
          :desc => 'Save image metadata to JSON files'
+
+  option :notify,
+         :type => :boolean,
+         :default => false,
+         :desc => 'Notify user with popups'
 
   def watch(path, bucket)
     init(path, bucket, options)
