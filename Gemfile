@@ -4,6 +4,7 @@ require 'rbconfig'
 
 gem 'aws-sdk'
 gem 'clipboard'
+gem 'filesize'
 gem 'listen', '~> 2.0', github: 'guard/listen'
 gem 'rb-fsevent'
 gem 'rb-inotify'

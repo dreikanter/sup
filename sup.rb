@@ -2,6 +2,7 @@ require 'aws-sdk'
 require 'clipboard'
 require 'fileutils'
 require 'json'
+require 'filesize'
 require 'listen'
 require 'logger'
 require 'thor'
@@ -35,6 +36,7 @@ module Sup
   ID_FILE = 'id.txt'
   CONFIG_FILE = File.join Dir.home, '.sup'
   LEGAL_EXTENSIONS = ['png', 'jpg']
+  BAD_IDS = ['meta', 'fuck', 'bitch']
 
   # Defaults
   JPEG_QUALITY = 80
@@ -61,7 +63,8 @@ module Sup
 
     @args = args
 
-    logger.info "last id is #{last_id}"
+    id = last_id
+    logger.info "last id is #{id.to_s(36)} (id)"
   end
 
   # Initializes S3 connection with access credentials from ~/.sup
@@ -81,7 +84,7 @@ module Sup
     File.join @path, Sup::ID_FILE
   end
 
-  # Last id value from cache or bucket, if there are no cache.
+  # Last integer id value from cache or bucket, if there are no cache.
   def last_id
     begin
       return Integer(File.read(id_file))
@@ -91,12 +94,12 @@ module Sup
     end
   end
 
-  # Scan bucket objects for the last image id, and cache the value.
+  # Scan bucket objects for the last image id, and cache the integer value.
   def pull_last_id
     logger.info "scanning s3://#{@bucket_name} for last id"
     begin
       objects = @bucket.objects.with_prefix("#{Sup::META_DIR}/")
-      id = (objects.map {|o| File.basename(o.key, '.*').to_i}).max || 0
+      id = (objects.map {|o| File.basename(o.key, '.*').to_i(36)}).max || 0
       File.write(id_file, id)
       return id
     rescue => e
@@ -143,12 +146,16 @@ module Sup
       raise
     end
 
-    id = last_id + 1
-    logger.info "new image id: #{id}"
+    # Get new id
+    id = last_id
+    begin
+      id36 = (id += 1).to_s(36)
+    end while Sup::BAD_IDS.include? id36
+    logger.info "new image id: #{id36} (id)"
 
     # Generating image copy in alternative format
     format = jpg_png(ext)
-    dst_file = File.join(@proc_dir, "#{id}.#{format}")
+    dst_file = File.join(@proc_dir, "#{id36}.#{format}")
     unless convert(src_file, dst_file)
       logger.error "error converting source image"
       return nil
@@ -160,21 +167,24 @@ module Sup
     if src_size <= dst_size
       File.unlink(dst_file)
       format = ext
-      dst_file = File.join(@proc_dir, "#{id}.#{format}")
+      dst_file = File.join(@proc_dir, "#{id36}.#{format}")
       FileUtils.copy_file(src_file, dst_file)
     end
     max_size = [dst_size, src_size].max
     gain = (Float(dst_size - src_size).abs / max_size * 100).round(1)
-    logger.info "#{format} is #{gain}% more compact"
+    size = [dst_size, src_size].min
+    logger.info "#{format.upcase} is #{gain}% more compact"
+    pretty_size = Filesize.from("12502343 B").pretty
+    logger.info "image size: #{pretty_size}"
 
     # Generate metadata file
-    meta_key = File.join(Sup::META_DIR, "#{id}.json")
+    meta_key = File.join(Sup::META_DIR, "#{id36}.json")
     meta_file = File.join(@proc_dir, meta_key)
     File.write(meta_file, JSON.dump({
       width: 0,
       height: 0,
       format: format,
-      size: [dst_size, src_size].min,
+      size: size,
       timestamp: Time.now.utc.to_s
     }))
 
@@ -182,11 +192,11 @@ module Sup
     File.write(id_file, id)
 
     return {
-      :key => "#{id}.#{format}",
+      :key => "#{id36}.#{format}",
       :file => dst_file,
       :meta_key => meta_key,
       :meta_file => meta_file,
-      :url => URI.join(@base_url, "#{id}.#{format}").to_s
+      :url => URI.join(@base_url, "#{id36}.#{format}").to_s
     }
   end
 
