@@ -38,7 +38,7 @@ To access S3 bucket sup requires Amazon Web Services [access credentials](https:
 
 User notification is working on OS X and Window. Sup uses standard system notification on OS X. On Windows you will need a helper tool [notifu](http://www.paralint.com/projects/notifu/) to be available on `%PATH%`.
 
-<p align="center"><img src="http://sh.drafts.cc/2w.jpg" alt="sup notification"></p>
+<p align="center"><img src="https://s3-eu-west-1.amazonaws.com/sh.drafts.cc/2w.jpg" alt="sup notification" /></p>
 
 ## Usage
 
