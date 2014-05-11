@@ -27,11 +27,40 @@ module Logging
   end
 end
 
+module Graphics
+  DEFAULT_JPEG_QUALITY = 80
+  PREVIEW_MAX_WIDTH    = 800
+  PREVIEW_MAX_HEIGHT   = 800
+
+  # ImageMagick's convert.
+  def convert(src_file, dst_file, quality=nil)
+    quality ||= Graphics::DEFAULT_JPEG_QUALITY
+    options = '.jpg' == File.extname(dst_file) ? "-quality #{quality}" : ''
+    return system("convert #{options} \"#{src_file}\" \"#{dst_file}\"")
+  end
+
+  def resize(src_file, dst_file, width, height, quality=nil)
+    quality ||= Graphics::DEFAULT_JPEG_QUALITY
+    options = []
+    options << "-quality #{quality}" if '.jpg' == File.extname(dst_file)
+    options << "-resize #{width}x#{height}\\>"
+    options = options.join(' ')
+    return system("convert #{options} \"#{src_file}\" \"#{dst_file}\"")
+  end
+
+  def dimensions(file_name)
+    width, height = `identify -format \"%w %h\" #{file_name}`.split
+    return Integer(width), Integer(height)
+  end
+end
+
 module Sup
   include Logging
+  include Graphics
 
   # Constants
   META_DIR = 'meta'
+  PREVIEW_DIR = 'preview'
   PROC_DIR = 'processed'
   ID_FILE = 'id.txt'
   CONFIG_FILE = File.join Dir.home, '.sup'
@@ -39,7 +68,6 @@ module Sup
   BAD_IDS = ['meta', 'fuck', 'bitch']
 
   # Defaults
-  JPEG_QUALITY = 80
   BASE_URL = 'http://<bucket>/'
 
   # Initialize everything.
@@ -51,7 +79,6 @@ module Sup
     if Pathname.new(@proc_dir).relative?
       @proc_dir = File.expand_path(@proc_dir, @path)
     end
-    FileUtils.mkdir_p(File.join(@proc_dir, Sup::META_DIR))
 
     @bucket_name = bucket_name
     @bucket = get_bucket(@bucket_name)
@@ -108,15 +135,6 @@ module Sup
     end
   end
 
-  # ImageMagick's convert.
-  def convert(src_file, dst_file)
-    use_path = @args.im_dir.nil? || args.im_dir.empty?
-    cmd = use_path ? 'convert' : File.join(@args.im_dir, 'convert')
-    to_jpg = '.jpg' == File.extname(dst_file)
-    options = to_jpg ? "-quality #{@args[:jpeg_quality]}" : ''
-    return execute("#{cmd} #{options} \"#{src_file}\" \"#{dst_file}\"")
-  end
-
   # Notify user.
   def notify(title, message)
     # TODO: Variate notification methods
@@ -135,6 +153,10 @@ module Sup
     'jpg' == ext ? 'png' : 'jpg'
   end
 
+  def ensure_dir_exists(dir_path)
+    FileUtils.mkdir_p(dir_path) unless File.directory? dir_path
+  end
+
   # Converts image file to optimal format, generate metadata file,
   # and returns an array of generated file names.
   def process_image(src_file)
@@ -151,12 +173,14 @@ module Sup
     begin
       id36 = (id += 1).to_s(36)
     end while Sup::BAD_IDS.include? id36
-    logger.info "new image id: #{id36} (id)"
+    logger.info "new image id: #{id36} (#{id})"
 
     # Generating image copy in alternative format
     format = jpg_png(ext)
-    dst_file = File.join(@proc_dir, "#{id36}.#{format}")
-    unless convert(src_file, dst_file)
+    key = "#{id36}.#{format}"
+    dst_file = File.join(@proc_dir, key)
+    ensure_dir_exists(@proc_dir)
+    unless convert(src_file, dst_file, @args[:quality])
       logger.error "error converting source image"
       return nil
     end
@@ -167,41 +191,60 @@ module Sup
     if src_size <= dst_size
       File.unlink(dst_file)
       format = ext
-      dst_file = File.join(@proc_dir, "#{id36}.#{format}")
+      key = "#{id36}.#{format}"
+      dst_file = File.join(@proc_dir, key)
       FileUtils.copy_file(src_file, dst_file)
     end
+    files = {key => dst_file}
+
+    # Some logging
     max_size = [dst_size, src_size].max
     gain = (Float(dst_size - src_size).abs / max_size * 100).round(1)
-    size = [dst_size, src_size].min
     logger.info "#{format.upcase} is #{gain}% more compact"
-    pretty_size = Filesize.from("12502343 B").pretty
-    logger.info "image size: #{pretty_size}"
+    width, height = dimensions(dst_file)
+    size = [dst_size, src_size].min
+    pretty_size = Filesize.from("#{size} B").pretty
+    logger.info "image size: #{pretty_size} (#{width}x#{height})"
+
+    # Generate preview
+    if @args[:preview]
+      key = File.join(Sup::PREVIEW_DIR, "#{id36}.#{format}")
+      dst_file = File.join(@proc_dir, key)
+      files[key] = dst_file
+      ensure_dir_exists(File.join(@proc_dir, Sup::PREVIEW_DIR))
+      resize(src_file,
+             dst_file,
+             @args[:max_width],
+             @args[:max_height],
+             @args[:quality])
+    end
 
     # Generate metadata file
-    meta_key = File.join(Sup::META_DIR, "#{id36}.json")
-    meta_file = File.join(@proc_dir, meta_key)
-    File.write(meta_file, JSON.dump({
-      width: 0,
-      height: 0,
-      format: format,
-      size: size,
-      timestamp: Time.now.utc.to_s
-    }))
+    if @args[:meta]
+      key = File.join(Sup::META_DIR, "#{id36}.json")
+      file_name = File.join(@proc_dir, key)
+      files[key] = file_name
+      ensure_dir_exists(File.join(@proc_dir, Sup::META_DIR))
+      File.write(file_name, JSON.dump({
+        width: width,
+        height: height,
+        format: format,
+        size: size,
+        timestamp: Time.now.utc.to_s
+      }))
+    end
 
     # Save new image id as last id
     File.write(id_file, id)
 
     return {
-      :key => "#{id36}.#{format}",
-      :file => dst_file,
-      :meta_key => meta_key,
-      :meta_file => meta_file,
+      :files => files,
       :url => URI.join(@base_url, "#{id36}.#{format}").to_s
     }
   end
 
   # Uploads a file to S3 bucket with specified key.
-  def upload(file_name, key)
+  def upload(key, file_name)
     logger.info "uploading s3://#{@bucket_name}/#{key}"
     @bucket.objects[key].write(Pathname.new(file_name))
   end
@@ -214,8 +257,7 @@ module Sup
         next if file_name.start_with?(@proc_dir)
         logger.info "new file: #{file_name}"
         info = process_image(file_name)
-        upload(info[:file], info[:key])
-        upload(info[:meta_file], info[:meta_key])
+        info[:files].each {|key, file_name| upload(key, file_name)}
         Clipboard.copy info[:url]
         notify("Screenshot Uploader", "URL: #{info[:url]}")
       end
@@ -225,13 +267,16 @@ module Sup
               latency: @args.latency,
               force_polling: @args.force_polling,
               &callback).start
+
     logger.info "watching #{@path} (use Ctrl-C to exit)"
+    trap("INT") {exit}
     sleep
   end
 end
 
 class CLI < Thor
   include Sup
+  include Graphics
 
   package_name File.basename(__FILE__, '.*')
 
@@ -247,11 +292,6 @@ class CLI < Thor
        'Watch for new screenshots'
   long_desc 'Watch <path> for new screenshots ' +
        'and upload them to s3://<bucket>'
-  option :save,
-         :type => :boolean,
-         :default => false,
-         :desc => 'Save local copy for processed files'
-
   option :proc_dir,
          :banner => '<path>',
          :default => Sup::PROC_DIR,
@@ -271,14 +311,31 @@ class CLI < Thor
          :default => Sup::BASE_URL,
          :desc => 'Base URL for uploaded files'
 
-  option :jpeg_quality,
+  option :quality,
          :type => :numeric,
-         :default => Sup::JPEG_QUALITY,
+         :default => Graphics::DEFAULT_JPEG_QUALITY,
          :desc => 'Quality for JPEG files'
 
-  option :im_dir,
-         :banner => '<path>',
-         :desc => 'Path to ImageMagick tools (depend on $path by default)'
+  option :max_width,
+         :type => :numeric,
+         :default => Graphics::PREVIEW_MAX_WIDTH,
+         :desc => 'Maximum preview width'
+
+  option :max_height,
+         :type => :numeric,
+         :default => Graphics::PREVIEW_MAX_HEIGHT,
+         :desc => 'Maximum preview height'
+
+  option :preview,
+         :type => :boolean,
+         :default => false,
+         :desc => 'Generate downscaled preview images'
+
+  option :meta,
+         :type => :boolean,
+         :default => false,
+         :desc => 'Save image metadata to JSON files'
+
   def watch(path, bucket)
     init(path, bucket, options)
     watch!
