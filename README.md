@@ -1,8 +1,6 @@
 # Sup — Screenshot Uploader
 
-This is a tiny companion service for your favorite screenshot tool, allowing you to take control over image sharing functionality.
-
-Sup is compatible with any screenshot capturer that is able to save screenshots to file system. Here are some options:
+This is a tiny companion service to your favorite screenshot tool. It allows to take control over image sharing functionality. Sup is compatible with any application that can save a screenshot to file. Here are some examples:
 
 - [Monosnap](http://monosnap.com)
 - [FastStone Capture](http://www.faststone.org/FSCaptureDetail.htm)
@@ -10,19 +8,19 @@ Sup is compatible with any screenshot capturer that is able to save screenshots 
 - [Cropper](https://cropper.codeplex.com/)
 - [Lightscreen](http://lightscreen.com.ar/)
 
-Sup monitors a directory where screenshots supposed to be saved, and performs the following operations for each new file:
+Sup monitors file system for new screenshots and carries out these steps for each new image:
 
-- Determine better graphic format from JPEG and PNG, and convert source file if needed.
+- Determine most compact graphic format from JPEG and PNG, and convert source file if needed.
 - Give a short unique name to the screenshot.
-- (Optionally) Generate downscaled preview image with required dimensions.
-- (Optionally) Save image metadata (like width, height, timestamp and some other information) to a JSON file.
+- Generate downscaled preview image with user-defined dimensions.
+- Save image metadata, like width, height, timestamp and some other details, to a JSON file.
 - Upload everything to S3 bucket.
-- Copy new screenshot URL to clipboard.
+- Copy direct screenshot URL to clipboard.
 - Notify user with popup.
 
 ## Installation
 
-Sup requires [ImageMagick](http://imagemagick.org/) to be installed and available on PATH. This instruction also assumes you already have git, Ruby and bundle.
+Sup requires [ImageMagick](http://imagemagick.org/) to be installed and available on PATH. Also this instruction assumes you already have git, Ruby and bundle.
 
 Clone the sources from GitHub and install script dependencies:
 
