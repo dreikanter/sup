@@ -22,4 +22,5 @@ gem 'rb-fsevent', :require => darwin_only('rb-fsevent')
 gem 'rb-inotify', :require => linux_only('rb-inotify')
 gem 'terminal-notifier', :require => darwin_only('terminal-notifier')
 gem 'thor'
-gem 'wdm', "~> 0.1.0", :platforms => [:mswin, :mingw], :require => windows_only('wdm')
+gem 'wdm', "~> 0.1.0", :platforms => [:mswin, :mingw],
+  :require => windows_only('wdm')

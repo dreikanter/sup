@@ -37,6 +37,7 @@ module Graphics
   DEFAULT_JPEG_QUALITY = 80
   PREVIEW_MAX_WIDTH    = 800
   PREVIEW_MAX_HEIGHT   = 800
+  DEFAULT_LATENCY      = 0.5
 
   # ImageMagick's convert.
   def convert(src_file, dst_file, quality=nil)
@@ -310,7 +311,7 @@ class CLI < Thor
 
   option :latency,
          :type => :numeric,
-         :default => 0.5,
+         :default => Sup::DEFAULT_LATENCY,
          :desc => 'Callback latency in seconds'
 
   option :force_polling,
