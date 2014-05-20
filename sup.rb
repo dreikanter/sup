@@ -297,6 +297,7 @@ module Sup
   def watch!
     raise 'Initialization required' if @path.nil? or @bucket.nil?
     callback = Proc.new do |modified, added, removed|
+      urls = []
       modified.each do |file_name|
         next if file_name.start_with?(@proc_dir)
         logger.info "new file: #{file_name}"
@@ -305,9 +306,14 @@ module Sup
           key, content_type, file_name = file_info
           upload(key, file_name, content_type)
         end
-        Clipboard.copy info[:url]
+        urls << info[:url]
+      end
+      unless urls.empty?
+        Clipboard.copy urls.join("\n")
         if @args[:notify]
-          notify("Screenshot Uploader", "URL: #{info[:url]}", info[:url])
+          title = urls.length > 1 ?
+            "#{urls.length} files uploaded" : "File uploaded"
+          notify(title, urls.join("\n"))
         end
       end
     end
