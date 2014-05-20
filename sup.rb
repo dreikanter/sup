@@ -10,6 +10,7 @@ require 'json'
 require 'filesize'
 require 'listen'
 require 'logger'
+require 'rb-notifu'
 require 'terminal-notifier' if DARWIN
 require 'thor'
 require 'uri'
@@ -147,10 +148,17 @@ module Sup
   end
 
   # Notify user.
-  def notify(title, message, url)
+  def notify(title, message)
     if WINDOWS
-      cmd = "notifu /p \"#{title}\" /m \"#{message}\" /d 2000 /t info /q"
-      execute(cmd)
+      Notifu::show(:title => title,
+                   :message => message,
+                   :type => :info,
+                   :time => 2,
+                   :nosound => true) do |status|
+        if Notifu::ERRORS.include? status
+          logger.error "notifu error: #{Notifu::ERRORS[status]}"
+        end
+      end
     elsif DARWIN
       TerminalNotifier.notify(message, :activate => url, :title => title)
     end

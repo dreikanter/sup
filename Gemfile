@@ -20,6 +20,7 @@ gem 'filesize'
 gem 'listen', '~> 2.0', :github => 'guard/listen'
 gem 'rb-fsevent', :require => darwin_only('rb-fsevent')
 gem 'rb-inotify', :require => linux_only('rb-inotify')
+gem 'rb-notifu', :require => windows_only('rb-notifu')
 gem 'terminal-notifier', :require => darwin_only('terminal-notifier')
 gem 'thor'
 gem 'wdm', "~> 0.1.0", :platforms => [:mswin, :mingw],
