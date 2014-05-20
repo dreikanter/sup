@@ -34,7 +34,7 @@ module Logging
 end
 
 module Graphics
-  DEFAULT_JPEG_QUALITY = 80
+  DEFAULT_JPEG_QUALITY = 90
   PREVIEW_MAX_WIDTH    = 800
   PREVIEW_MAX_HEIGHT   = 800
   DEFAULT_LATENCY      = 0.5
@@ -46,11 +46,15 @@ module Graphics
     return system("convert #{options} \"#{src_file}\" \"#{dst_file}\"")
   end
 
-  def resize(src_file, dst_file, width, height, quality=nil)
+  def resize(src_file, dst_file, max_width, max_height, quality=nil)
     quality ||= Graphics::DEFAULT_JPEG_QUALITY
     options = []
+    if WINDOWS
+      options << "-resize \"#{max_width}x#{max_height}>\""
+    else
+      options << "-resize #{max_width}x#{max_height}\\>"
+    end
     options << "-quality #{quality}" if '.jpg' == File.extname(dst_file)
-    options << "-resize #{width}x#{height}\\>"
     options = options.join(' ')
     return system("convert #{options} \"#{src_file}\" \"#{dst_file}\"")
   end
