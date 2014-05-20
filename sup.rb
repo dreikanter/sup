@@ -228,6 +228,13 @@ module Sup
              @args[:max_width],
              @args[:max_height],
              @args[:quality])
+      preview_size = File.size(dst_file)
+      pretty_size = Filesize.from("#{preview_size} B").pretty
+      preview_width, preview_height = dimensions(dst_file)
+      logger.info "preview size: #{pretty_size} " +
+        "(#{preview_width}x#{preview_height})"
+    else
+      preview_size, preview_width, preview_height = nil, nil, nil
     end
 
     # Generate metadata file
@@ -239,8 +246,11 @@ module Sup
       File.write(file_name, JSON.dump({
         width: width,
         height: height,
-        format: format,
+        preview_width: preview_width,
+        preview_height: preview_height,
+        content_type: ext2ctype(format),
         size: size,
+        preview_size: preview_size,
         timestamp: Time.now.utc.to_s
       }))
     end
