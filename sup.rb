@@ -205,7 +205,8 @@ module Sup
       dst_file = File.join(@proc_dir, key)
       FileUtils.copy_file(src_file, dst_file)
     end
-    files = {key => dst_file}
+
+    files = [[key, ext2ctype(format), dst_file]]
 
     # Some logging
     max_size = [dst_size, src_size].max
@@ -220,7 +221,7 @@ module Sup
     if @args[:preview]
       key = File.join(Sup::PREVIEW_DIR, "#{id36}.#{format}")
       dst_file = File.join(@proc_dir, key)
-      files[key] = dst_file
+      files << [key, ext2ctype(format), dst_file]
       ensure_dir_exists(File.join(@proc_dir, Sup::PREVIEW_DIR))
       resize(src_file,
              dst_file,
@@ -233,7 +234,7 @@ module Sup
     if @args[:meta]
       key = File.join(Sup::META_DIR, "#{id36}.json")
       file_name = File.join(@proc_dir, key)
-      files[key] = file_name
+      files << [key, ext2ctype('json'), file_name]
       ensure_dir_exists(File.join(@proc_dir, Sup::META_DIR))
       File.write(file_name, JSON.dump({
         width: width,
@@ -253,10 +254,29 @@ module Sup
     }
   end
 
+  # Converts file extension (w/o leading dot) to corresponding content type.
+  def ext2ctype(ext)
+    case ext
+    when 'jpg', 'jpeg'
+      'image/jpeg'
+    when 'png'
+      'image/png'
+    when 'json'
+      'application/json'
+    else
+      nil
+    end
+  end
+
   # Uploads a file to S3 bucket with specified key.
-  def upload(key, file_name)
-    logger.info "uploading s3://#{@bucket_name}/#{key}"
-    @bucket.objects[key].write(Pathname.new(file_name))
+  def upload(key, file_name, content_type=nil)
+    content_type ||= ext2ctype(key)
+    type = content_type ? "as #{content_type}" : '(content type undefined)'
+    logger.info "uploading s3://#{@bucket_name}/#{key} #{type}"
+    @bucket.objects[key].write(
+      :file => Pathname.new(file_name), 
+      :content_type => content_type
+    )
   end
 
   # Watch source directory for new image files.
@@ -267,7 +287,10 @@ module Sup
         next if file_name.start_with?(@proc_dir)
         logger.info "new file: #{file_name}"
         info = process_image(file_name)
-        info[:files].each {|key, file_name| upload(key, file_name)}
+        info[:files].each do |file_info|
+          key, content_type, file_name = file_info
+          upload(key, file_name, content_type)
+        end
         Clipboard.copy info[:url]
         if @args[:notify]
           notify("Screenshot Uploader", "URL: #{info[:url]}", info[:url])
