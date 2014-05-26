@@ -311,8 +311,8 @@ module Sup
     raise 'Initialization required' if @path.nil? or @bucket.nil?
     callback = Proc.new do |modified, added, removed|
       urls = []
-      modified.sort.each do |file_name| 
-       next if file_name.start_with?(@proc_dir)
+      (added | modified).sort.each do |file_name|
+        next if file_name.start_with?(@proc_dir)
         logger.info "new file: #{file_name}"
         info = process_image(file_name)
         info[:files].each do |file_info|
