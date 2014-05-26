@@ -77,7 +77,7 @@ module Sup
   ID_FILE = 'id.txt'
   CONFIG_FILE = File.join Dir.home, '.sup'
   LEGAL_EXTENSIONS = ['png', 'jpg']
-  BAD_IDS = ['meta', 'fuck', 'bitch']
+  BAD_IDS = [META_DIR, PREVIEW_DIR, 'fuck', 'bitch']
 
   # Defaults
   BASE_URL = 'http://<bucket>/'
@@ -133,12 +133,17 @@ module Sup
     end
   end
 
+  # Converts S3 object key (like meta/123abc.json) to int id value.
+  def key_to_id(key)
+    key.gsub(/^[^\/]*\/*|\.json$/, '').to_i(36)
+  end
+
   # Scan bucket objects for the last image id, and cache the integer value.
   def pull_last_id
     logger.info "scanning s3://#{@bucket_name} for last id"
     begin
       objects = @bucket.objects.with_prefix("#{Sup::META_DIR}/")
-      id = (objects.map {|o| File.basename(o.key, '.*').to_i(36)}).max || 0
+      id = (objects.map { |o| key_to_id o.key }).max || 0
       File.write(id_file, id)
       return id
     rescue => e
@@ -195,7 +200,7 @@ module Sup
     begin
       id36 = (id += 1).to_s(36)
     end while Sup::BAD_IDS.include? id36
-    logger.info "new image id: #{id36} (#{id})"
+    logger.info "-> new image id: #{id36} (#{id})"
 
     # Generating image copy in alternative format
     format = jpg_png(ext)
@@ -306,8 +311,8 @@ module Sup
     raise 'Initialization required' if @path.nil? or @bucket.nil?
     callback = Proc.new do |modified, added, removed|
       urls = []
-      modified.each do |file_name|
-        next if file_name.start_with?(@proc_dir)
+      modified.sort.each do |file_name| 
+       next if file_name.start_with?(@proc_dir)
         logger.info "new file: #{file_name}"
         info = process_image(file_name)
         info[:files].each do |file_info|
